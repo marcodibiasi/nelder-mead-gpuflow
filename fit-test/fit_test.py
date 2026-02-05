@@ -7,6 +7,8 @@ from osgeo import gdal
 from PIL import Image
 
 edge_detection_kernel = [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]
+sigma = 200
+
 
 
 def calc_fit(realflow_path: str, simulflow_path: str) -> float:
@@ -27,7 +29,7 @@ def calc_fit(realflow_path: str, simulflow_path: str) -> float:
 def intersection_cardinality(realflow_path: str, simulflow_path) -> int:
     img_real = gdal.Open(realflow_path)
     band_real = np.array(img_real.GetRasterBand(1).ReadAsArray())
-    band_real = (band_real == 1.0).astype(int)
+    band_real = (band_real > 1e-2).astype(int)
     
     img_simul = gdal.Open(simulflow_path)
     band_simul = np.array(img_simul.GetRasterBand(1).ReadAsArray())
@@ -43,11 +45,11 @@ def intersection_cardinality(realflow_path: str, simulflow_path) -> int:
 def union_cardinality(realflow_path: str, simulflow_path) -> int:
     img_real = gdal.Open(realflow_path)
     band_real = np.array(img_real.GetRasterBand(1).ReadAsArray())
-    band_real = (band_real == 1.0).astype(int)
-    
+    band_real = (band_real > 1e-2).astype(int)
+
     img_simul = gdal.Open(simulflow_path)
     band_simul = np.array(img_simul.GetRasterBand(1).ReadAsArray())
-    band_simul = (band_simul == 1.0).astype(int)
+    band_simul = (band_simul > 1e-2).astype(int)
 
     union = np.logical_or(band_real, band_simul)
     union_cardinality = np.count_nonzero(union)
@@ -70,7 +72,6 @@ def get_frontier(img_path: str, output_path: str) -> list:
     band1 = (band1 > 1e-2).astype(int)
 
     #print(img_path, np.unique(band1), band1.shape)
-    
     edges = convolve(band1, edge_detection_kernel)
     edges = (edges > 0.0).astype(np.uint8)
 
@@ -85,5 +86,4 @@ def get_frontier(img_path: str, output_path: str) -> list:
     return np.array(edges_coord)
 
 
-#get_frontier("data/lava-2017", "real_frontier.png")
-calc_fit("data/lava-2017", "data/simulated.bsq")
+print(calc_fit("data/lava-2017.bsq", "data/simulated.bsq"))
