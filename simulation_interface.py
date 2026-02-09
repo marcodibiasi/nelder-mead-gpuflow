@@ -13,7 +13,7 @@ def run_simulation(dem_fname: str, init_fname: str, vent_fname: str, sim_index: 
         return
 
     gpuflow = "../../gpuflow/gpuflow"
-    subprocess.run([gpuflow, dem_fname, init_fname, vent_fname, 'state --single-state', '-d', out_dir], stdout = subprocess.DEVNULL) 
+    subprocess.run([gpuflow, dem_fname, init_fname, vent_fname, 'state', '--single-state', '-d', out_dir], stdout = subprocess.DEVNULL) 
 
 
 if __name__  == "__main__": 
