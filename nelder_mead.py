@@ -200,6 +200,10 @@ def resize_raster(source_path: str, target_path: str, output_path: str) -> None:
 
 
 
+# TODO:
+# Refactor intersection and union to process the images once 
+# Can join the jaccardi index function 
+
 def intersection_cardinality(realflow_path: str, simulflow_path) -> int:
     img_real = gdal.Open(realflow_path)
     band_real = np.array(img_real.GetRasterBand(1).ReadAsArray())
@@ -263,7 +267,7 @@ def get_frontier(img_path: str, output_path: str) -> list:
 
 
 def get_centroid(simplex: list) -> list:
-    return sum(simplex) / dim
+    return sum(simplex) / (dim + 1)
 
 
 def order(simplex: list, simplex_scores: list) -> list:
