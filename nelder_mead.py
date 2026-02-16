@@ -53,6 +53,35 @@ dem_file = "data/dem_2016_corr_10m"
 dim = 4
 
 
+# n is how many latin hypercube should be generated, therefore the number of simulation is n*5
+def simplex_scouting(n: int, ranges: list, masks: list) -> list:
+    samples = []
+    scores = []
+
+    for i in range(n): 
+        latin_sample = latin_hypercube()
+        for j in range(len(latin_sample)):
+            denorm_vertex = denormalize_vertex(latin_sample[j], ranges)
+            samples.append(latin_sample[j])
+
+            simul_index = "s" + str(i*5 + j)
+            scores.append(vertex_simulation(denorm_vertex, simul_index, masks))
+    
+    vertices_scores = zip(scores, samples, range(n*5))
+    vertices_scores = sorted(vertices_scores, key = lambda x: x[0])
+
+    sorted_scores, sorted_samples, sorted_indices = zip(*vertices_scores)
+    for i in range(5): 
+        original_path = "runs/run-s" + str(sorted_indices[i]) + "-dir/"
+        rename_path = "runs/run-" + str(i) + "-dir/"
+        os.rename(original_path, rename_path)
+
+    # TODO: 
+    # return a simplex with distant vertices by calculating the norm before adding a vertex
+
+    return sorted_samples[:5], sorted_scores[:5]
+
+
 
 def generate_1d_grid(resolution: int) -> list:
     sample_size = 1 / resolution
@@ -200,11 +229,7 @@ def resize_raster(source_path: str, target_path: str, output_path: str) -> None:
 
 
 
-# TODO:
-# Refactor intersection and union to process the images once 
-# Can join the jaccardi index function 
-
-def intersection_cardinality(realflow_path: str, simulflow_path) -> int:
+def jaccard_index(realflow_path: str, simulflow_path: str) -> float:
     img_real = gdal.Open(realflow_path)
     band_real = np.array(img_real.GetRasterBand(1).ReadAsArray())
     band_real = (band_real > 0.0).astype(int)
@@ -214,31 +239,10 @@ def intersection_cardinality(realflow_path: str, simulflow_path) -> int:
     band_simul = (band_simul > 0.0).astype(int)
 
     intersection = np.logical_and(band_real, band_simul)
-    intersection_cardinality = np.count_nonzero(intersection)
-   
-    return intersection_cardinality
-
-
-
-def union_cardinality(realflow_path: str, simulflow_path) -> int:
-    img_real = gdal.Open(realflow_path)
-    band_real = np.array(img_real.GetRasterBand(1).ReadAsArray())
-    band_real = (band_real > 0.0).astype(int)
-    
-    img_simul = gdal.Open(simulflow_path)
-    band_simul = np.array(img_simul.GetRasterBand(1).ReadAsArray())
-    band_simul = (band_simul > 0.0).astype(int)
+    intersection_card = np.count_nonzero(intersection)
 
     union = np.logical_or(band_real, band_simul)
-    union_cardinality = np.count_nonzero(union)
-   
-    return union_cardinality
-
-
-
-def jaccard_index(realflow_path: str, simulflow_path: str) -> float:
-    intersection_card = intersection_cardinality(realflow_path, simulflow_path)
-    union_card = union_cardinality(realflow_path, simulflow_path)
+    union_card = np.count_nonzero(union) 
 
     return intersection_card / union_card
 
@@ -318,22 +322,18 @@ def in_mask(masks: tuple, vertex: list) -> bool:
 
 # !! EASTING NORTHING H20 FLUXPCT !!
 
-def nelder_mead() -> None: 
-    # define the list of ranges to denormalize the simplex
-    easting_range = [vent_location[0] - location_error, vent_location[0] + location_error] 
-    northing_range = [vent_location[1] - location_error, vent_location[1] + location_error] 
-    
-    ranges = [easting_range, northing_range, h2o_range, flux_pct_range]
+def nelder_mead(ranges: list) -> None: 
     simul_index = dim + 1
-
     masks = get_masks(exclusion_path)
 
     # STARTING STEP: GENERATE AND EVALUATE THE STARTING SIMPLEX
-    simplex = latin_hypercube()
-    denorm_simplex = denormalize_simplex(simplex, ranges)
-    simplex_scores = simplex_simulation(denorm_simplex, 0, masks)
+    # simplex = latin_hypercube()
+    # denorm_simplex = denormalize_simplex(simplex, ranges)
+    # simplex_scores = simplex_simulation(denorm_simplex, 0, masks)
+    simplex, simplex_scores = simplex_scouting(2, ranges, masks) 
+    print(simplex_scores)
 
-   # operation coefficients
+    # operation coefficients
     alpha = 1.0     # reflection coefficient
     gamma = 2.0     # expansion coefficient
     rho = 0.5       # contraction coefficient
@@ -443,8 +443,9 @@ def nelder_mead() -> None:
 
 
 if __name__ == "__main__": 
-    nelder_mead()
-    # easting_range = [vent_location[0] - location_error, vent_location[0] + location_error] 
-    # northing_range = [vent_location[1] - location_error, vent_location[1] + location_error] 
-    # ranges = [easting_range, northing_range, h2o_range, flux_pct_range]
+    easting_range = [vent_location[0] - location_error, vent_location[0] + location_error] 
+    northing_range = [vent_location[1] - location_error, vent_location[1] + location_error] 
+    ranges = [easting_range, northing_range, h2o_range, flux_pct_range]
+
+    nelder_mead(ranges)
 
