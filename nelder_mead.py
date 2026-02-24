@@ -54,7 +54,7 @@ dim = 4
 
 
 # n is how many latin hypercube should be generated, therefore the number of simulation is n*5
-def simplex_scouting(n: int, ranges: list, masks: list) -> list:
+def simplex_scouting(n: int, ranges: list, masks: list, minimum_distance: int) -> list:
     samples = []
     scores = []
 
@@ -69,17 +69,25 @@ def simplex_scouting(n: int, ranges: list, masks: list) -> list:
     
     vertices_scores = zip(scores, samples, range(n*5))
     vertices_scores = sorted(vertices_scores, key = lambda x: x[0])
-
     sorted_scores, sorted_samples, sorted_indices = zip(*vertices_scores)
+    
+    final_simplex = []
+    final_simplex.append(sorted_samples[0])
+    final_scores.append(sorted_scores[0])
+    
+    curr_vertex = 1
+    while curr_vertex < len(sorted_samples[1:]) and len(final_simlex) < 5: 
+        if np.linalg.norm(sorted_samples[0] - sorted_samples[curr_vertex]) >= minimum_distance:
+            final_simplex.append(sorted_samples[curr_vertex])
+            final_scores.append(sorted_scores[curr_vertex])
+        curr_vertex += 1
+
     for i in range(5): 
         original_path = "runs/run-s" + str(sorted_indices[i]) + "-dir/"
         rename_path = "runs/run-" + str(i) + "-dir/"
         os.rename(original_path, rename_path)
 
-    # TODO: 
-    # return a simplex with distant vertices by calculating the norm before adding a vertex
-
-    return sorted_samples[:5], sorted_scores[:5]
+    return final_scores, final_simplex 
 
 
 
@@ -330,7 +338,7 @@ def nelder_mead(ranges: list) -> None:
     # simplex = latin_hypercube()
     # denorm_simplex = denormalize_simplex(simplex, ranges)
     # simplex_scores = simplex_simulation(denorm_simplex, 0, masks)
-    simplex, simplex_scores = simplex_scouting(2, ranges, masks) 
+    simplex, simplex_scores = simplex_scouting(2, ranges, masks, 0.3) 
     print(simplex_scores)
 
     # operation coefficients
