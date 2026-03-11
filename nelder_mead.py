@@ -8,6 +8,7 @@ from scipy.spatial.distance import directed_hausdorff
 from osgeo import gdal
 from PIL import Image
 import ast
+import json
 
 import setup_files as setup
 import simulation_interface as simul
@@ -172,13 +173,33 @@ def vertex_simulation(vertex: list, simul_index: int, masks: tuple) -> float:
     
     fit = -calc_fit(real_flow_path, resizedflow_path, simul_index) 
 
-    # saving a file to log score and coordinates
     s_vertex = f"{simul_index}: {vertex[0]}, {vertex[1]}, {vertex[2]}, {vertex[3]}"
     with open(dir_path + "vertex_info.txt", "w", encoding="utf-8") as f: 
         f.write(s_vertex)
         f.write(f"\n{fit}")
 
+    export_geojson(dir_path + "coordinates.json", vertex[0], vertex[1])
+
     return fit
+
+
+def export_geojson(filename: str, easting: int, northing: int) -> None:
+    geojson = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [easting, northing]
+                }
+            }
+        ]
+    }
+
+    with open(filename, "w") as f:
+        json.dump(geojson, f, indent=2)
 
 
 def simplex_simulation(simplex: list, simul_index: int, masks: tuple) -> list:
@@ -329,7 +350,6 @@ def in_mask(masks: tuple, vertex: list) -> bool:
 
 
 # !! EASTING NORTHING H20 FLUXPCT !!
-
 def nelder_mead(ranges: list) -> None: 
     simul_index = dim + 1
     masks = get_masks(exclusion_path)
